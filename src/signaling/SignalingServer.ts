@@ -8,6 +8,13 @@ interface ExtendedWebSockets extends WebSocket {
   isRegistered: boolean;
 }
 
+//message types
+const MSG = {
+  REGISTER: "register", //register to the signaling
+  PEERS: "peers", //send the list of peers in the room
+  PEER_JOINED: "peer-joined", //broadcast the joining of a new peer to the room
+};
+
 export class SignalingServer {
   private wss: WebSocketServer;
   private rooms: RoomManager;
@@ -19,13 +26,13 @@ export class SignalingServer {
   }
 
   attach() {
-    this.wss.on("connection", (ws: ExtendedWebSockets) => {
+    this.wss.on("connection", (ws: ExtendedWebSockets, req) => {
       ws.peerId = uuid();
       ws.isRegistered = false;
 
       ws.on("message", (data) => {
         const msg = JSON.parse(data.toString());
-        this.handleMessage(ws, msg);
+        this.handleMessage(ws, msg, req);
       });
 
       ws.on("close", () => {
@@ -44,7 +51,49 @@ export class SignalingServer {
     });
   }
 
-  handleMessage(ws: ExtendedWebSockets, msg: any) {}
+  handleMessage(ws: ExtendedWebSockets, msg: any, req: any) {
+    switch (msg.type) {
+      case MSG.REGISTER: {
+        const ip = this.getIP(req);
+        const roomId = this.rooms.getRoomId(ip, msg.roomCode ?? null);
+
+        ws.peerId = ws.peerId;
+        ws.isRegistered = true;
+        ws.roomId = roomId;
+
+        const peerInfo = {
+          ip: ip,
+          displayName: msg.displayName ?? "Anonymous",
+          deviceType: msg.deviceType ?? "desktop",
+        };
+
+        this.rooms.join(ws.peerId, ws.roomId, peerInfo);
+        this.sockets.set(ws.peerId, ws);
+
+        this.send(ws, {
+          type: MSG.PEERS,
+          selfId: ws.peerId,
+          peers: this.rooms
+            .getRoomPeers(roomId)
+            .filter((p) => p.peerId !== ws.peerId),
+        });
+
+        this.broadcast(roomId, ws.peerId, {
+          type: MSG.PEER_JOINED,
+          peer: { ...peerInfo, peerId: ws.peerId },
+        });
+        break;
+      }
+    }
+  }
+
+  send(ws: ExtendedWebSockets, data: any) {
+    try {
+      ws.send(JSON.stringify(data));
+    } catch (e) {
+      console.error("somthing went wrong");
+    }
+  }
 
   broadcast(roomId: string, excludePeerId: string, data: any) {
     const peers = this.rooms.getRoomPeers(roomId);
@@ -57,5 +106,9 @@ export class SignalingServer {
         ws.send(json);
       }
     }
+  }
+
+  getIP(req: any): string {
+    return req.socket.remoteAddress || "unknown";
   }
 }
