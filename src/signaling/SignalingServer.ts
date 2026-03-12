@@ -52,6 +52,7 @@ export class SignalingServer {
   }
 
   handleMessage(ws: ExtendedWebSockets, msg: any, req: any) {
+    console.log(msg)
     switch (msg.type) {
       case MSG.REGISTER: {
         const ip = this.getIP(req);
@@ -73,6 +74,7 @@ export class SignalingServer {
         this.send(ws, {
           type: MSG.PEERS,
           selfId: ws.peerId,
+          selfInfo:peerInfo,
           peers: this.rooms
             .getRoomPeers(roomId)
             .filter((p) => p.peerId !== ws.peerId),
