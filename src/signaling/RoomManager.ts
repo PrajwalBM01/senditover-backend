@@ -29,6 +29,8 @@ export class RoomManager {
     this.rooms.get(roomId)?.set(peerId, { ...peerInfo, peerId, roomId });
 
     this.peerRoom.set(peerId, roomId);
+    console.log("rooms:", this.rooms);
+    console.log("peers:", this.peerRoom);
   }
 
   leave(peerId: string): null | string {
@@ -36,6 +38,7 @@ export class RoomManager {
     if (!roomId) return null;
 
     this.rooms.get(roomId)?.delete(peerId);
+    this.peerRoom.delete(peerId);
     if (this.rooms.get(roomId)?.size === 0) {
       this.rooms.delete(roomId);
     }
@@ -48,5 +51,15 @@ export class RoomManager {
 
   getPeerRoom(peerid: string): string | undefined {
     return this.peerRoom.get(peerid);
+  }
+
+  updatePeerName(peerId: string, updatedName: string) {
+    const roomId = this.peerRoom.get(peerId);
+    const peer = this.rooms.get(roomId!)?.get(peerId);
+
+    if (!peer) return false;
+
+    peer.displayName = updatedName;
+    return true;
   }
 }

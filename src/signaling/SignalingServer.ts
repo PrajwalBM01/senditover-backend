@@ -13,6 +13,8 @@ const MSG = {
   REGISTER: "register", //register to the signaling
   PEERS: "peers", //send the list of peers in the room
   PEER_JOINED: "peer-joined", //broadcast the joining of a new peer to the room
+  PEER_NAME_CHANGE: "name-change", //update a name of a peer
+  UPDATE_PEER_NAME: "update-name-change",
 };
 
 export class SignalingServer {
@@ -52,7 +54,7 @@ export class SignalingServer {
   }
 
   handleMessage(ws: ExtendedWebSockets, msg: any, req: any) {
-    console.log(msg)
+    console.log(msg);
     switch (msg.type) {
       case MSG.REGISTER: {
         const ip = this.getIP(req);
@@ -74,7 +76,7 @@ export class SignalingServer {
         this.send(ws, {
           type: MSG.PEERS,
           selfId: ws.peerId,
-          selfInfo:peerInfo,
+          selfInfo: peerInfo,
           peers: this.rooms
             .getRoomPeers(roomId)
             .filter((p) => p.peerId !== ws.peerId),
@@ -86,6 +88,21 @@ export class SignalingServer {
         });
         break;
       }
+
+      //might need to update this
+      case MSG.PEER_NAME_CHANGE:
+        {
+          if (this.rooms.updatePeerName(msg.peerId, msg.displayName)) {
+            this.send(ws, {
+              type: MSG.UPDATE_PEER_NAME,
+              peer: {
+                peerId: ws.peerId,
+                displayName: msg.displayName,
+              },
+            });
+          }
+        }
+        break;
     }
   }
 
