@@ -53,10 +53,8 @@ export class RoomManager {
     return this.peerRoom.get(peerid);
   }
 
-  updatePeerName(peerId: string, updatedName: string) {
-    const roomId = this.peerRoom.get(peerId);
-    const peer = this.rooms.get(roomId!)?.get(peerId);
-
+  setNewDisplayName(peerId: string, roomId: string, updatedName: string) {
+    const peer = this.rooms.get(roomId)?.get(peerId);
     if (!peer) return false;
 
     peer.displayName = updatedName;

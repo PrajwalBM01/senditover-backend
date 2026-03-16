@@ -13,7 +13,7 @@ const MSG = {
   REGISTER: "register", //register to the signaling
   PEERS: "peers", //send the list of peers in the room
   PEER_JOINED: "peer-joined", //broadcast the joining of a new peer to the room
-  PEER_NAME_CHANGE: "name-change", //update a name of a peer
+  PEER_NAME_CHANGE: "peer-name-change", //update a name of a peer
   UPDATE_PEER_NAME: "update-name-change",
 };
 
@@ -92,7 +92,9 @@ export class SignalingServer {
       //might need to update this
       case MSG.PEER_NAME_CHANGE:
         {
-          if (this.rooms.updatePeerName(msg.peerId, msg.displayName)) {
+          if (
+            this.rooms.setNewDisplayName(msg.peerId, ws.roomId, msg.displayName)
+          ) {
             this.send(ws, {
               type: MSG.UPDATE_PEER_NAME,
               peer: {
@@ -100,7 +102,16 @@ export class SignalingServer {
                 displayName: msg.displayName,
               },
             });
+
+            this.broadcast(ws.roomId, ws.peerId, {
+              type: MSG.UPDATE_PEER_NAME,
+              peer: {
+                peerId: ws.peerId,
+                displayName: msg.displayName,
+              },
+            });
           }
+          console.log("afterchange:", this.rooms);
         }
         break;
     }
